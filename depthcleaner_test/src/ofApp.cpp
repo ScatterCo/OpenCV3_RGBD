@@ -39,8 +39,21 @@ void ofApp::setup() {
     
     gui.setup();
     gui.setPosition(10, 120);
-    gui.add(filterSlider.setup("filter x times", filterNumTimes, 1, 50));
-    gui.add(filterButton.setup("filter depth data"));
+    gui.add(filterSlider.setup("num passes", filterNumTimes, 1, 50));
+    gui.add(filterButton.setup("filter"));
+    
+    ofMatrix4x4 mat = ofMatrix4x4(-0.00185878, -0.999998,    -0.000887482, 0.0,
+                                  -0.999575,    0.00188394,  -0.0290703,   0.0,
+                                  0.0290719,   0.000833068, -0.999577,    0.0,
+                                  0.0,         0.0,          0.0,         1.0);
+    ofQuaternion orientation;
+    orientation.set(mat);
+    
+    ofVec3f pos;
+    pos = ofVec3f(-4.17757, -0.130167, 151.032);
+    
+    camera.setPosition(pos);
+    camera.setOrientation(orientation);
 }
 
 void ofApp::filterButtonPressed() {
@@ -158,6 +171,11 @@ void ofApp::keyPressed(int key) {
     if(key == 'w') {
         windowSize = ((windowSize + 2) % 8);
         cleaned = false;
+    }
+    
+    if(key == 'p') {
+        ofLog() << camera.getOrientationQuat();
+        ofLog() << camera.getPosition();
     }
 }
 
