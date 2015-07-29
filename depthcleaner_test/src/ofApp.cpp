@@ -25,8 +25,10 @@ void ofApp::setup() {
     }
     points.setMode(OF_PRIMITIVE_POINTS);
     
+    ofDisableArbTex();
     ofLoadImage(sprite, "dot.png");
     sprite.update();
+    ofEnableArbTex();
     pointcloudShader.load("pointcloud");
     
     drawInPixels = true;
@@ -39,7 +41,9 @@ void ofApp::setup() {
     
     gui.setup();
     gui.setPosition(10, 120);
-    gui.add(filterSlider.setup("num passes", filterNumTimes, 1, 50));
+    
+    maxNumPasses = 10;
+    gui.add(filterSlider.setup("num passes", filterNumTimes, 1, maxNumPasses));
     gui.add(filterButton.setup("filter"));
     
     ofMatrix4x4 mat = ofMatrix4x4(-0.00185878, -0.999998,    -0.000887482, 0.0,
@@ -105,17 +109,16 @@ void ofApp::update() {
 
 void ofApp::draw() {
     ofBackground(255);
+    ofSetColor(0);
     
     gui.draw();
-    
-    ofSetColor(0);
     
     string originalOrCleaned = drawInPixels ? "original" : "cleaned";
     
     ofDrawBitmapString("framenum: " + ofToString(frameNum) + "\n\n" +
-                       "drawing: " + originalOrCleaned + "\n\n" +
+                       "showing [space to change]: " + originalOrCleaned + "\n\n" +
                        "pixels changed: " + ofToString(numPixelsDiff) + "\n\n" +
-                       "[w]indow size: " + ofToString(windowSize),
+                       "window size [w to change]: " + ofToString(windowSize),
                        20, 20);
     
     if(outPixels.isAllocated()) {
@@ -130,7 +133,6 @@ void ofApp::draw() {
         camera.begin();
         ofScale (1,-1,1);
         
-        ofSetColor(255);
         pointcloudShader.begin();
         
         pointcloudShader.setUniformMatrix4f("calibration", ofMatrix4x4());

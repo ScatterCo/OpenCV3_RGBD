@@ -23,6 +23,7 @@ protected:
     int frameNum;
     int numPixelsDiff;
     int windowSize;
+    int maxNumPasses;
     vector<string> images;
     cv::rgbd::RgbdNormals normalComputer;
     cv::Ptr<cv::rgbd::DepthCleaner> depth_cleaner_;
