@@ -25,6 +25,8 @@ protected:
 	ofImage sprite;
     ofShader pointcloudShader;
     ofVboMesh points;
+	
+	ofShader normalShader;
     
     ofShortPixels inPixels;
 	ofTexture pointCloud;

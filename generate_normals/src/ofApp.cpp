@@ -29,9 +29,26 @@ void ofApp::setup() {
     sprite.update();
     ofEnableArbTex();
     pointcloudShader.load("pointcloud");
+	
+	normalShader.load("normal");
     
     windowSize = 5;
 	loadDepthFrame(images[frameNum]);
+	
+//	camera.setOrientation(ofVec3f(0.0, 0.0, -90.0));
+	ofVec3f position = ofVec3f(-209.753, 402.35, -761.939);
+	ofMatrix4x4 transform = ofMatrix4x4( 
+										-0.0147771,	0.882499,	0.470081,	0,
+										0.971513,		0.123882,	-0.202028,	0,
+										-0.236525,		0.453705,	-0.85919,	0,
+										0,				0,			0,			1
+										);
+	
+	ofQuaternion orientation;
+	orientation.set(transform);
+	camera.setPosition(position);
+	camera.setOrientation(orientation);
+	
 }
 
 void ofApp::update() {
@@ -59,12 +76,16 @@ void ofApp::draw() {
 	
 	if(normalTex.isAllocated()) {
 		ofSetColor(255, 255, 255);
+		
+		normalShader.begin();
 		normalTex.draw(552, 50);
+		normalShader.end();
 	}
 	
 	ofTranslate(-ofGetWidth()/2,-ofGetHeight()/2);
 	camera.begin();
 	ofScale (1,-1,1);
+	ofTranslate(-400, -200);
 	
 	pointcloudShader.begin();
 	
@@ -75,9 +96,10 @@ void ofApp::draw() {
 	pointcloudShader.setUniform2f("pp", 259.913, 205.322); //notsure..
 	
 	pointcloudShader.setUniformTexture("texture", pointCloud, 1);
+	pointcloudShader.setUniformTexture("normals", normalTex, 2);
 	
 	ofEnablePointSprites();
-	pointcloudShader.setUniformTexture("sprite", sprite, 2);
+	pointcloudShader.setUniformTexture("sprite", sprite, 3);
 	points.draw();
 	ofDisablePointSprites();
 	
@@ -147,7 +169,7 @@ void ofApp::computeNormals() {
 	calibrationMatrix.at<float>(2, 2) = 1.0;
 
 	cv::rgbd::depthTo3d(toCv(inPixels), calibrationMatrix, pointsMat);
-	normalComputer = new cv::rgbd::RgbdNormals(inPixels.getHeight(), inPixels.getWidth(), CV_32F, calibrationMatrix, windowSize, cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+	normalComputer = new cv::rgbd::RgbdNormals(inPixels.getHeight(), inPixels.getWidth(), pointsMat.depth(), calibrationMatrix, windowSize, cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS);
 	normalComputer->operator()(pointsMat, normals);
 	
 	ofFloatPixels pointCloudPix;
