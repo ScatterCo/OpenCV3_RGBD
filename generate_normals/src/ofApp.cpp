@@ -70,14 +70,14 @@ void ofApp::draw() {
 		ofSetColor(255, 255, 255);
 		ofTexture inImage;
 		inImage.loadData(inPixels);
-		inImage.draw(20, 20);
+		inImage.draw(20, 50);
 	}
 	
 	if(outPixels.isAllocated()) {
 		ofSetColor(255, 255, 255);
 		ofTexture outImage;
 		outImage.loadData(outPixels);
-		outImage.draw(530, 20);
+		outImage.draw(552, 50);
 	}
 }
 
