@@ -3,9 +3,7 @@
 using namespace ofxCv;
 using namespace cv;
 
-void ofApp::setup() {
-	loadDepthFrame();
-    
+void ofApp::setup() {    
     ofDirectory dir;
     string folderPath = "DepthDataSample";
     dir.open(folderPath);
@@ -33,20 +31,6 @@ void ofApp::setup() {
     pointcloudShader.load("pointcloud");
     
     windowSize = 5;
-    
-    ofMatrix4x4 mat = ofMatrix4x4(-0.00185878, -0.999998,    -0.000887482, 0.0,
-                                  -0.999575,    0.00188394,  -0.0290703,   0.0,
-                                  0.0290719,   0.000833068, -0.999577,    0.0,
-                                  0.0,         0.0,          0.0,         1.0);
-    ofQuaternion orientation;
-    orientation.set(mat);
-    
-    ofVec3f pos;
-    pos = ofVec3f(-4.17757, -0.130167, 151.032);
-    
-    camera.setPosition(pos);
-    camera.setOrientation(orientation);
-	
 	loadDepthFrame(images[frameNum]);
 }
 
@@ -75,10 +59,33 @@ void ofApp::draw() {
 	
 	if(outPixels.isAllocated()) {
 		ofSetColor(255, 255, 255);
-		ofTexture outImage;
-		outImage.loadData(outPixels);
-		outImage.draw(552, 50);
+//		ofTexture outImage;
+//		outImage.loadData(outPixels);
+//		outImage.draw(552, 50);
+		pointCloud.draw(552, 50);
 	}
+	
+	ofTranslate(-ofGetWidth()/2,-ofGetHeight()/2);
+	camera.begin();
+	ofScale (1,-1,1);
+	
+	pointcloudShader.begin();
+	
+	pointcloudShader.setUniformMatrix4f("calibration", ofMatrix4x4());
+	pointcloudShader.setUniform2f("dimensions", pointCloud.getWidth(), pointCloud.getHeight());
+	
+	pointcloudShader.setUniform2f("fov", 364.885, 364.885); //notsure..
+	pointcloudShader.setUniform2f("pp", 259.913, 205.322); //notsure..
+	
+	pointcloudShader.setUniformTexture("texture", pointCloud, 1);
+	
+	ofEnablePointSprites();
+	pointcloudShader.setUniformTexture("sprite", sprite, 2);
+	points.draw();
+	ofDisablePointSprites();
+	
+	pointcloudShader.end();
+	camera.end();
 }
 
 void ofApp::keyPressed(int key) {
@@ -145,6 +152,18 @@ void ofApp::computeNormals() {
 	cv::rgbd::depthTo3d(toCv(inPixels), calibrationMatrix, pointsMat);
 	normalComputer = new cv::rgbd::RgbdNormals(inPixels.getWidth(), inPixels.getHeight(), CV_32F, calibrationMatrix, windowSize, cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS);
 	normalComputer->operator()(pointsMat, normals);
+	
+	ofFloatPixels pointCloudPix;
+	toOf(pointsMat, pointCloudPix);
+	pointCloud.loadData(pointCloudPix);
+//	
+//	points.clear();
+//	for(int x = 0; x < pointCloudPix.getWidth(); x++) {
+//		for(int y = 0; y < pointCloudPix.getHeight(); y++) {
+//			ofColor c = pointCloudPix.getColor(x, y);
+//			points.addVertex(ofVec3f(c.r, c.g, c.b * 10.0));
+//		}
+//	}
 	
 	toOf(normals, outPixels);
 	normalsGenerated = true;

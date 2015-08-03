@@ -28,6 +28,7 @@ protected:
     
     ofShortPixels inPixels;
 	ofFloatPixels outPixels;
+	ofTexture pointCloud;
     
     ofEasyCam camera;
 	bool normalsGenerated;
