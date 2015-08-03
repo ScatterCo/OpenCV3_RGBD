@@ -57,12 +57,9 @@ void ofApp::draw() {
 		inImage.draw(20, 50);
 	}
 	
-	if(outPixels.isAllocated()) {
+	if(normalTex.isAllocated()) {
 		ofSetColor(255, 255, 255);
-//		ofTexture outImage;
-//		outImage.loadData(outPixels);
-//		outImage.draw(552, 50);
-		pointCloud.draw(552, 50);
+		normalTex.draw(552, 50);
 	}
 	
 	ofTranslate(-ofGetWidth()/2,-ofGetHeight()/2);
@@ -150,21 +147,15 @@ void ofApp::computeNormals() {
 	calibrationMatrix.at<float>(2, 2) = 1.0;
 
 	cv::rgbd::depthTo3d(toCv(inPixels), calibrationMatrix, pointsMat);
-	normalComputer = new cv::rgbd::RgbdNormals(inPixels.getWidth(), inPixels.getHeight(), CV_32F, calibrationMatrix, windowSize, cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+	normalComputer = new cv::rgbd::RgbdNormals(inPixels.getHeight(), inPixels.getWidth(), CV_32F, calibrationMatrix, windowSize, cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS);
 	normalComputer->operator()(pointsMat, normals);
 	
 	ofFloatPixels pointCloudPix;
 	toOf(pointsMat, pointCloudPix);
 	pointCloud.loadData(pointCloudPix);
-//	
-//	points.clear();
-//	for(int x = 0; x < pointCloudPix.getWidth(); x++) {
-//		for(int y = 0; y < pointCloudPix.getHeight(); y++) {
-//			ofColor c = pointCloudPix.getColor(x, y);
-//			points.addVertex(ofVec3f(c.r, c.g, c.b * 10.0));
-//		}
-//	}
 	
-	toOf(normals, outPixels);
+	ofFloatPixels normalPixels;
+	toOf(normals, normalPixels);
+	normalTex.loadData(normalPixels);
 	normalsGenerated = true;
 }

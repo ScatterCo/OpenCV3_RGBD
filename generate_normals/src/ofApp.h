@@ -27,8 +27,8 @@ protected:
     ofVboMesh points;
     
     ofShortPixels inPixels;
-	ofFloatPixels outPixels;
 	ofTexture pointCloud;
+	ofTexture normalTex;
     
     ofEasyCam camera;
 	bool normalsGenerated;
