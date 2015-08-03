@@ -30,8 +30,13 @@ protected:
     
     ofShortPixels inPixels;
 	ofTexture pointCloud;
+	ofFloatPixels normalPixels;
 	ofTexture normalTex;
     
     ofEasyCam camera;
 	bool normalsGenerated;
+	
+	cv::Ptr<cv::rgbd::DepthCleaner> depth_cleaner_;
+	int numDepthCleanPasses;
+	ofShortPixels cleanDepth(ofShortPixels dirtyDepth, int numPasses);
 };

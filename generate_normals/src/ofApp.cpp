@@ -33,6 +33,7 @@ void ofApp::setup() {
 	normalShader.load("normal");
     
     windowSize = 5;
+	numDepthCleanPasses = true;
 	loadDepthFrame(images[frameNum]);
 	
 //	camera.setOrientation(ofVec3f(0.0, 0.0, -90.0));
@@ -63,8 +64,9 @@ void ofApp::draw() {
     ofBackground(255);
     ofSetColor(0);
     
-    ofDrawBitmapString("framenum: " + ofToString(frameNum) + "\n\n" +
-                       "window size [w to change]: " + ofToString(windowSize),
+    ofDrawBitmapString("framenum: " + ofToString(frameNum) + "\n" +
+                       "window size [w to change]: " + ofToString(windowSize) + "\n" +
+					   "depth clean passes: [c/C to change]: " + ofToString(numDepthCleanPasses),
                        20, 20);
 	
 	if(inPixels.isAllocated()) {
@@ -121,11 +123,26 @@ void ofApp::keyPressed(int key) {
         windowSize = ((windowSize + 2) % 8);
         normalsGenerated = false;
     }
+	if(key == 'c') {
+		if(numDepthCleanPasses == 0) {
+			return;
+		}
+		
+		numDepthCleanPasses --;
+		normalsGenerated = false;
+	}
+	if(key == 'C') {
+		numDepthCleanPasses ++;
+		normalsGenerated = false;
+	}
     
     if(key == 'p') {
         ofLog() << camera.getOrientationQuat();
         ofLog() << camera.getPosition();
     }
+	if(key == 's') {
+		ofSaveImage(normalPixels, ofToString(numDepthCleanPasses) + "-passes.tiff");
+	}
 }
 
 void ofApp::loadDepthFrame(string file) {
@@ -151,6 +168,20 @@ void ofApp::loadDepthFrame(string file) {
 	normalsGenerated = false;
 }
 
+ofShortPixels ofApp::cleanDepth(ofShortPixels dirtyDepth, int numPasses) {
+	ofShortPixels cleanedDepth;
+	cleanedDepth.allocate(dirtyDepth.getWidth(), dirtyDepth.getHeight(), dirtyDepth.getImageType());
+	depth_cleaner_ = new cv::rgbd::DepthCleaner(toCv(dirtyDepth).depth(), windowSize, cv::rgbd::DepthCleaner::DEPTH_CLEANER_NIL);
+	
+	depth_cleaner_->operator()(toCv(dirtyDepth), toCv(cleanedDepth));
+	
+	for(int i = 0; i < numPasses - 1; i++) {
+		depth_cleaner_->operator()(toCv(cleanedDepth), toCv(cleanedDepth));
+	}
+	
+	return cleanedDepth;
+}
+
 void ofApp::computeNormals() {	
 	// prepare matrices structures
 	cv::Mat pointsMat;
@@ -168,15 +199,18 @@ void ofApp::computeNormals() {
 	calibrationMatrix.at<float>(2, 1) = 0.0;
 	calibrationMatrix.at<float>(2, 2) = 1.0;
 
-	cv::rgbd::depthTo3d(toCv(inPixels), calibrationMatrix, pointsMat);
-	normalComputer = new cv::rgbd::RgbdNormals(inPixels.getHeight(), inPixels.getWidth(), pointsMat.depth(), calibrationMatrix, windowSize, cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+	ofShortPixels depth = inPixels;
+	if(numDepthCleanPasses > 0) {
+		depth = cleanDepth(inPixels, numDepthCleanPasses);
+	}
+	cv::rgbd::depthTo3d(toCv(depth), calibrationMatrix, pointsMat);
+	normalComputer = new cv::rgbd::RgbdNormals(depth.getHeight(), depth.getWidth(), pointsMat.depth(), calibrationMatrix, windowSize, cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS);
 	normalComputer->operator()(pointsMat, normals);
 	
 	ofFloatPixels pointCloudPix;
 	toOf(pointsMat, pointCloudPix);
 	pointCloud.loadData(pointCloudPix);
 	
-	ofFloatPixels normalPixels;
 	toOf(normals, normalPixels);
 	normalTex.loadData(normalPixels);
 	normalsGenerated = true;
