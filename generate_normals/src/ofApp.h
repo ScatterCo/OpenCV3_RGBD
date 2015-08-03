@@ -26,8 +26,8 @@ protected:
     ofShader pointcloudShader;
     ofVboMesh points;
     
-    ofShortImage inPixels;
-	ofImage outImage;
+    ofShortPixels inPixels;
+	ofFloatPixels outPixels;
     
     ofEasyCam camera;
 	bool normalsGenerated;

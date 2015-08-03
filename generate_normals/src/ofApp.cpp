@@ -65,36 +65,19 @@ void ofApp::draw() {
     ofDrawBitmapString("framenum: " + ofToString(frameNum) + "\n\n" +
                        "window size [w to change]: " + ofToString(windowSize),
                        20, 20);
-    
-    
-    if(inPixels.isAllocated()) {
-        
-        ofTranslate(-ofGetWidth()/2,-ofGetHeight()/2);
-        camera.begin();
-        ofScale (1,-1,1);
-        
-        pointcloudShader.begin();
-        
-        pointcloudShader.setUniformMatrix4f("calibration", ofMatrix4x4());
-        pointcloudShader.setUniform2f("dimensions", inPixels.getWidth(), inPixels.getHeight());
-        
-        pointcloudShader.setUniform2f("fov", 364.885, 364.885); //notsure..
-        pointcloudShader.setUniform2f("pp", 259.913, 205.322); //notsure..
-
-		pointcloudShader.setUniformTexture("texture", inPixels, 1);
-
-        
-        ofEnablePointSprites();
-        pointcloudShader.setUniformTexture("sprite", sprite, 2);
-        points.draw();
-        ofDisablePointSprites();
-        
-        pointcloudShader.end();
-        camera.end();
+	
+	if(inPixels.isAllocated()) {
+		ofSetColor(255, 255, 255);
+		ofTexture inImage;
+		inImage.loadData(inPixels);
+		inImage.draw(20, 20);
 	}
 	
-	if(outImage.isAllocated()) {
-		outImage.draw(20, 20, 800, 600);
+	if(outPixels.isAllocated()) {
+		ofSetColor(255, 255, 255);
+		ofTexture outImage;
+		outImage.loadData(outPixels);
+		outImage.draw(530, 20);
 	}
 }
 
@@ -133,23 +116,19 @@ void ofApp::loadDepthFrame(string file) {
     }
         
 	unsigned char* src = compressedImage.getData(); //this holds the RGB png loaded from disk
-	unsigned short* dst = inPixels.getPixels().getData();
+	unsigned short* dst = inPixels.getData();
 	for(int i = 0; i < compressedImage.getWidth() * compressedImage.getHeight(); i++){
         *(dst++) = ((*src) << 8) | *(src+1); //scoot the pixels around
 		src += 3;
 	}
     
-    inPixels.update();
 	normalsGenerated = false;
 }
 
-void ofApp::computeNormals() {
+void ofApp::computeNormals() {	
 	// prepare matrices structures
-	cv::Mat points;
+	cv::Mat pointsMat;
 	cv::Mat normals;
-	if(!outImage.isAllocated()) {
-		outImage.allocate(normals.cols, normals.rows, OF_IMAGE_COLOR);
-	}
 	
 	// calibration matrix
 	cv::Mat calibrationMatrix(3, 3, CV_32F);
@@ -163,11 +142,10 @@ void ofApp::computeNormals() {
 	calibrationMatrix.at<float>(2, 1) = 0.0;
 	calibrationMatrix.at<float>(2, 2) = 1.0;
 
-	cv::rgbd::depthTo3d(toCv(inPixels.getPixels()), calibrationMatrix, points);
-	
+	cv::rgbd::depthTo3d(toCv(inPixels), calibrationMatrix, pointsMat);
 	normalComputer = new cv::rgbd::RgbdNormals(inPixels.getWidth(), inPixels.getHeight(), CV_32F, calibrationMatrix, windowSize, cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS);
-	normalComputer->operator()(points, normals);
+	normalComputer->operator()(pointsMat, normals);
 	
-	toOf(normals, outImage);
+	toOf(normals, outPixels);
 	normalsGenerated = true;
 }
