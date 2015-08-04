@@ -20,9 +20,8 @@ void main(void)
 {
     //align to texture
     vec2 halfvec = vec2(.5,.5);
-    vec2 xy = texture2DRect(texture, floor(gl_Vertex.xy) + halfvec).rg * dimensions;
-    float depth = texture2DRect(texture, floor(gl_Vertex.xy) + halfvec).b * 500.0;
-    vec4 pos = vec4(xy, depth, 1.0);
+    vec3 posTexel = texture2DRect(texture, floor(gl_Vertex.xy) + halfvec).rgb;
+    vec4 pos = vec4(posTexel * vec3(500.0), 1.0);
     pos = calibration * pos;
     gl_Position = gl_ProjectionMatrix *  gl_ModelViewMatrix * pos;
 

@@ -92,7 +92,6 @@ void ofApp::draw() {
 	ofEnableDepthTest();
 	ofTranslate(-ofGetWidth()/2,0);
 	camera.begin();
-	ofScale (1,-1,1);
 	ofTranslate(-400, -200);
 	
 	pointcloudShader.begin();

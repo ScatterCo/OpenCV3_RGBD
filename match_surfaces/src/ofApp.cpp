@@ -101,9 +101,9 @@ void ofApp::draw() {
 	pointcloudShader.end();
 	
 	ofMatrix4x4 transform;
-	if(enableAlignment) {
-		transform = odometryTransform;
-	}
+//	if(enableAlignment) {
+//		transform = odometryTransform;
+//	}
 	pointcloudShader.begin();
 	
 	pointcloudShader.setUniformMatrix4f("calibration", transform);
@@ -132,6 +132,7 @@ void ofApp::keyPressed(int key) {
     }
 	if(key == ' ') {
 		enableAlignment = !enableAlignment;
+		odometryComputed = false;
 	}
 }
 
@@ -177,6 +178,7 @@ void ofApp::computeOdometry() {
 	calibrationMatrix.at<float>(2, 1) = 0.0;
 	calibrationMatrix.at<float>(2, 2) = 1.0;
 	
+	// init odometry computer
 	odometryComputer = new cv::rgbd::ICPOdometry(calibrationMatrix);
 //	odometryComputer->setMaxRotation(360);
 //	odometryComputer->setMaxTranslation(1000.0);
@@ -184,14 +186,13 @@ void ofApp::computeOdometry() {
 //	odometryComputer->setMaxDepthDiff(1000);
 //	odometryComputer->setTransformType(cv::rgbd::Odometry::RIGID_BODY_MOTION);
 	
-	cv::Mat transform(4, 4, CV_32F);
+	// rescale depths
 	cv::Mat westMat = toCv(westPixels);
 	cv::Mat southMat = toCv(southPixels);
-//	westMat.convertTo(westMat, CV_32FC1);
-//	southMat.convertTo(southMat, CV_32FC1);
 	cv::rgbd::rescaleDepth(westMat, CV_32FC1, westMat);
 	cv::rgbd::rescaleDepth(southMat, CV_32FC1, southMat);
 	
+	// check if depth is valid
 	if(!cv::rgbd::isValidDepth(*westMat.data)) {
 		ofLogError("odometry", "West matrix is not valid depth");
 	}
@@ -200,16 +201,31 @@ void ofApp::computeOdometry() {
 		ofLogError("odometry", "South matrix is not valid depth");
 	}
 	
-	bool res = odometryComputer->compute(cv::Mat(), westMat, cv::Mat(), cv::Mat(), southMat, cv::Mat(), transform);
-	if(!res) {
-		ofLogError("odometry", "Error computing odometry");
-	}	
-	
+	cv::Mat transform(4, 4, CV_32F);
+	if(enableAlignment) {
+		// compute odometry transform
+		bool res = odometryComputer->compute(cv::Mat(), westMat, cv::Mat(), cv::Mat(), southMat, cv::Mat(), transform);
+		if(!res) {
+			ofLogError("odometry", "Error computing odometry");
+		}
+		
+		// apply transform to south depth
+		cv::Mat warpedImg;
+		cv::Mat warpedDepth;
+		cv::Mat img;
+		southMat.convertTo(img, CV_8UC1);
+		cv::rgbd::warpFrame(img, southMat, cv::Mat(), transform, calibrationMatrix, cv::Mat(), warpedImg, &warpedDepth);
+		
+		southMat = warpedDepth;
+	}
+
+	// create point cloud from depth
 	cv::Mat westPointsMat;
 	cv::Mat southPointsMat;
-	cv::rgbd::depthTo3d(toCv(westPixels), calibrationMatrix, westPointsMat);
-	cv::rgbd::depthTo3d(toCv(southPixels), calibrationMatrix, southPointsMat);
+	cv::rgbd::depthTo3d(westMat, calibrationMatrix, westPointsMat);
+	cv::rgbd::depthTo3d(southMat, calibrationMatrix, southPointsMat);
 	
+	// convert to textures so we can use them in the shaders
 	ofFloatPixels westPointsPix;
 	toOf(westPointsMat, westPointsPix);
 	westPointCloud.loadData(westPointsPix);
@@ -218,12 +234,12 @@ void ofApp::computeOdometry() {
 	toOf(southPointsMat, southPointsPix);
 	southPointCloud.loadData(southPointsPix);
 	
+	// save transform
 	transform.convertTo(transform, CV_32F);
-//	odometryTransform = toOf(transform);
 	odometryTransform = ofMatrix4x4((float*)transform.data);
 	
-	cout << transform << endl;
-	cout << odometryTransform << endl;
+//	cout << transform << endl;
+//	cout << odometryTransform << endl;
 	
 	odometryComputed = true;
 }
