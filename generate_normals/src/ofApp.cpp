@@ -34,15 +34,22 @@ void ofApp::setup() {
     
     windowSize = 5;
 	numDepthCleanPasses = true;
+	drawTextures = false;
+	useSRI = false;
+	drawNormals = false;
 	loadDepthFrame(images[frameNum]);
 	
 //	camera.setOrientation(ofVec3f(0.0, 0.0, -90.0));
-	ofVec3f position = ofVec3f(-209.753, 402.35, -761.939);
+	ofVec3f position = ofVec3f(-200, -150, -750);
 	ofMatrix4x4 transform = ofMatrix4x4( 
-										-0.0147771,	0.882499,	0.470081,	0,
-										0.971513,		0.123882,	-0.202028,	0,
-										-0.236525,		0.453705,	-0.85919,	0,
-										0,				0,			0,			1
+//										-0.0147771,	0.882499,	0.470081,	0,
+//										0.971513,		0.123882,	-0.202028,	0,
+//										-0.236525,		0.453705,	-0.85919,	0,
+//										0,				0,			0,			1
+										-0.118529, 0.949529, -0.290424,        0,
+										0.99121, 0.0958363, -0.091204,        0,
+										-0.0587677, -0.298681, -0.952542,        0,
+										0,        0,        0,        1
 										);
 	
 	ofQuaternion orientation;
@@ -61,30 +68,28 @@ void ofApp::update() {
 
 
 void ofApp::draw() {
-    ofBackground(255);
-    ofSetColor(0);
-    
-    ofDrawBitmapString("framenum: " + ofToString(frameNum) + "\n" +
-                       "window size [w to change]: " + ofToString(windowSize) + "\n" +
-					   "depth clean passes: [c/C to change]: " + ofToString(numDepthCleanPasses),
-                       20, 20);
+    ofBackground(255);	
 	
-	if(inPixels.isAllocated()) {
-		ofSetColor(255, 255, 255);
-		ofTexture inImage;
-		inImage.loadData(inPixels);
-		inImage.draw(20, 50);
-	}
-	
-	if(normalTex.isAllocated()) {
-		ofSetColor(255, 255, 255);
+	if(drawTextures) {
+		if(inPixels.isAllocated()) {
+			ofSetColor(255, 255, 255);
+			ofTexture inImage;
+			inImage.loadData(inPixels);
+			inImage.draw(20, 70);
+		}
 		
-		normalShader.begin();
-		normalTex.draw(552, 50);
-		normalShader.end();
+		if(normalTex.isAllocated()) {
+			ofSetColor(255, 255, 255);
+			
+			normalShader.begin();
+			normalTex.draw(552, 70);
+			normalShader.end();
+		}
 	}
 	
-	ofTranslate(-ofGetWidth()/2,-ofGetHeight()/2);
+	ofPushMatrix();
+	ofEnableDepthTest();
+	ofTranslate(-ofGetWidth()/2,0);
 	camera.begin();
 	ofScale (1,-1,1);
 	ofTranslate(-400, -200);
@@ -98,7 +103,9 @@ void ofApp::draw() {
 	pointcloudShader.setUniform2f("pp", 259.913, 205.322); //notsure..
 	
 	pointcloudShader.setUniformTexture("texture", pointCloud, 1);
-	pointcloudShader.setUniformTexture("normals", normalTex, 2);
+	pointcloudShader.setUniformTexture("normalMap", normalTex, 2);
+	pointcloudShader.setUniform1i("drawNormals", drawNormals);
+	pointcloudShader.setUniform1f("t", ofGetElapsedTimef());
 	
 	ofEnablePointSprites();
 	pointcloudShader.setUniformTexture("sprite", sprite, 3);
@@ -107,6 +114,23 @@ void ofApp::draw() {
 	
 	pointcloudShader.end();
 	camera.end();
+	ofPopMatrix();
+	
+	
+	ofSetColor(5, 200);
+	ofEnableAlphaBlending();
+	ofDrawRectangle(0, 0, ofGetWidth(), 75);
+	
+	ofSetColor(255);
+	ofDrawBitmapString("framenum: [LEFT/RIGHT to change]	: " + ofToString(frameNum) + "\n" +
+					   "window size [w to change]		: " + ofToString(windowSize) + "\n" +
+					   "depth clean passes: [c/C to change]	: " + ofToString(numDepthCleanPasses) + "\n" +
+					   "draw textures: [t to toggle]		: " + ofToString(drawTextures),
+					   20, 20);
+	
+	string algorithmString =	"algorithm: FALS/SRI [a to toggle]	: " + ofToString(useSRI) + "\n" +
+								"draw normals: [n to toggle]		: " + ofToString(drawNormals) ;
+	ofDrawBitmapString(algorithmString, 500, 20);
 }
 
 void ofApp::keyPressed(int key) {
@@ -134,6 +158,16 @@ void ofApp::keyPressed(int key) {
 	if(key == 'C') {
 		numDepthCleanPasses ++;
 		normalsGenerated = false;
+	}
+	if(key == 't') {
+		drawTextures = !drawTextures;
+	}
+	if(key == 'a') {
+		useSRI = !useSRI;
+		normalsGenerated = false;
+	}
+	if(key == 'n') {
+		drawNormals = !drawNormals;
 	}
     
     if(key == 'p') {
@@ -204,7 +238,12 @@ void ofApp::computeNormals() {
 		depth = cleanDepth(inPixels, numDepthCleanPasses);
 	}
 	cv::rgbd::depthTo3d(toCv(depth), calibrationMatrix, pointsMat);
-	normalComputer = new cv::rgbd::RgbdNormals(depth.getHeight(), depth.getWidth(), pointsMat.depth(), calibrationMatrix, windowSize, cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS);
+	int algorithm = cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_FALS;
+	if(useSRI) {
+		algorithm = cv::rgbd::RgbdNormals::RGBD_NORMALS_METHOD_SRI;
+	}
+	
+	normalComputer = new cv::rgbd::RgbdNormals(depth.getHeight(), depth.getWidth(), pointsMat.depth(), calibrationMatrix, windowSize, algorithm);
 	normalComputer->operator()(pointsMat, normals);
 	
 	ofFloatPixels pointCloudPix;

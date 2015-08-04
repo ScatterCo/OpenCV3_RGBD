@@ -39,4 +39,7 @@ protected:
 	cv::Ptr<cv::rgbd::DepthCleaner> depth_cleaner_;
 	int numDepthCleanPasses;
 	ofShortPixels cleanDepth(ofShortPixels dirtyDepth, int numPasses);
+	bool drawTextures;
+	bool useSRI;
+	bool drawNormals;
 };
