@@ -8,11 +8,18 @@ void ofApp::setup() {
     
     for(int y = 0; y < 424; y += 1){
         for(int x = 0; x < 512; x += 1){
-            points.addVertex(ofVec3f(x,y,0));
+            westPoints.addVertex(ofVec3f(x,y,0));
         }
     }
-    points.setMode(OF_PRIMITIVE_POINTS);
-    
+    westPoints.setMode(OF_PRIMITIVE_POINTS);
+	
+	for(int y = 0; y < 424; y += 1){
+		for(int x = 0; x < 512; x += 1){
+			southPoints.addVertex(ofVec3f(x,y,0));
+		}
+	}
+	southPoints.setMode(OF_PRIMITIVE_POINTS);
+	
     ofDisableArbTex();
     ofLoadImage(sprite, "dot.png");
     sprite.update();
@@ -36,6 +43,7 @@ void ofApp::setup() {
 	camera.setPosition(position);
 	camera.setOrientation(orientation);
 	
+	enableAlignment = true;
 }
 
 void ofApp::update() {
@@ -69,7 +77,7 @@ void ofApp::draw() {
 		depthDrawingShader.end();
 	}
 	
-	/*
+	
 	ofTranslate(-ofGetWidth()/2,-ofGetHeight()/2);
 	camera.begin();
 	ofScale (1,-1,1);
@@ -78,21 +86,43 @@ void ofApp::draw() {
 	pointcloudShader.begin();
 	
 	pointcloudShader.setUniformMatrix4f("calibration", ofMatrix4x4());
-	pointcloudShader.setUniform2f("dimensions", pointCloud.getWidth(), pointCloud.getHeight());
+	pointcloudShader.setUniform2f("dimensions", westPointCloud.getWidth(), westPointCloud.getHeight());
 	
 	pointcloudShader.setUniform2f("fov", 364.885, 364.885); //notsure..
 	pointcloudShader.setUniform2f("pp", 259.913, 205.322); //notsure..
 	
-	pointcloudShader.setUniformTexture("texture", pointCloud, 1);
+	pointcloudShader.setUniformTexture("texture", westPointCloud, 1);
 	
 	ofEnablePointSprites();
-	pointcloudShader.setUniformTexture("sprite", sprite, 3);
-	points.draw();
+	pointcloudShader.setUniformTexture("sprite", sprite, 2);
+	westPoints.draw();
 	ofDisablePointSprites();
 	
 	pointcloudShader.end();
+	
+	ofMatrix4x4 transform;
+	if(enableAlignment) {
+		transform = odometryTransform;
+	}
+	pointcloudShader.begin();
+	
+	pointcloudShader.setUniformMatrix4f("calibration", transform);
+	pointcloudShader.setUniform2f("dimensions", southPointCloud.getWidth(), southPointCloud.getHeight());
+	
+	pointcloudShader.setUniform2f("fov", 364.885, 364.885); //notsure..
+	pointcloudShader.setUniform2f("pp", 259.913, 205.322); //notsure..
+	
+	pointcloudShader.setUniformTexture("texture", southPointCloud, 1);
+	
+	ofEnablePointSprites();
+	pointcloudShader.setUniformTexture("sprite", sprite, 2);
+	southPoints.draw();
+	ofDisablePointSprites();
+	
+	pointcloudShader.end();
+	
+	
 	camera.end();
-	 */
 }
 
 void ofApp::keyPressed(int key) {    
@@ -100,6 +130,9 @@ void ofApp::keyPressed(int key) {
         ofLog() << camera.getOrientationQuat();
         ofLog() << camera.getPosition();
     }
+	if(key == ' ') {
+		enableAlignment = !enableAlignment;
+	}
 }
 
 void ofApp::loadDepthFrames() {
@@ -151,11 +184,13 @@ void ofApp::computeOdometry() {
 //	odometryComputer->setMaxDepthDiff(1000);
 //	odometryComputer->setTransformType(cv::rgbd::Odometry::RIGID_BODY_MOTION);
 	
-	cv::Mat transform;
+	cv::Mat transform(4, 4, CV_32F);
 	cv::Mat westMat = toCv(westPixels);
 	cv::Mat southMat = toCv(southPixels);
-	westMat.convertTo(westMat, CV_32FC1);
-	southMat.convertTo(southMat, CV_32FC1);
+//	westMat.convertTo(westMat, CV_32FC1);
+//	southMat.convertTo(southMat, CV_32FC1);
+	cv::rgbd::rescaleDepth(westMat, CV_32FC1, westMat);
+	cv::rgbd::rescaleDepth(southMat, CV_32FC1, southMat);
 	
 	if(!cv::rgbd::isValidDepth(*westMat.data)) {
 		ofLogError("odometry", "West matrix is not valid depth");
@@ -166,11 +201,29 @@ void ofApp::computeOdometry() {
 	}
 	
 	bool res = odometryComputer->compute(cv::Mat(), westMat, cv::Mat(), cv::Mat(), southMat, cv::Mat(), transform);
-	if(res) {
-		cout << transform << endl;
-	}
-	else {
+	if(!res) {
 		ofLogError("odometry", "Error computing odometry");
-	}
+	}	
+	
+	cv::Mat westPointsMat;
+	cv::Mat southPointsMat;
+	cv::rgbd::depthTo3d(toCv(westPixels), calibrationMatrix, westPointsMat);
+	cv::rgbd::depthTo3d(toCv(southPixels), calibrationMatrix, southPointsMat);
+	
+	ofFloatPixels westPointsPix;
+	toOf(westPointsMat, westPointsPix);
+	westPointCloud.loadData(westPointsPix);
+	
+	ofFloatPixels southPointsPix;
+	toOf(southPointsMat, southPointsPix);
+	southPointCloud.loadData(southPointsPix);
+	
+	transform.convertTo(transform, CV_32F);
+//	odometryTransform = toOf(transform);
+	odometryTransform = ofMatrix4x4((float*)transform.data);
+	
+	cout << transform << endl;
+	cout << odometryTransform << endl;
+	
 	odometryComputed = true;
 }

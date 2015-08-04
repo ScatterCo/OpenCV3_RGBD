@@ -21,12 +21,18 @@ protected:
     
 	ofImage sprite;
     ofShader pointcloudShader;
-    ofVboMesh points;
-	ofTexture pointCloud;
+    ofVboMesh westPoints;
+	ofVboMesh southPoints;
+
+	ofTexture westPointCloud;
+	ofTexture southPointCloud;
     
     ofShortPixels southPixels;
 	ofShortPixels westPixels;
 	bool odometryComputed;
+	
+	bool enableAlignment;
+	ofMatrix4x4 odometryTransform;
 
     ofEasyCam camera;
 	

@@ -24,7 +24,7 @@ void main(void)
     pos = calibration * pos;
 
     pos = vec4(gl_Vertex.xy, depth, 1.0);
-
+    pos = calibration * pos;
     gl_Position = gl_ProjectionMatrix *  gl_ModelViewMatrix * pos;
     gl_FrontColor = gl_Color;
     gl_PointSize = 4.0;
