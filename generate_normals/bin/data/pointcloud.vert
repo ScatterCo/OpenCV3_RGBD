@@ -15,16 +15,8 @@ void main(void)
     vec2 halfvec = vec2(.5,.5);
     vec2 xy = texture2DRect(texture, floor(gl_Vertex.xy) + halfvec).rg * dimensions;
     float depth = texture2DRect(texture, floor(gl_Vertex.xy) + halfvec).b * 255.0;
-
-/*
-    vec4 pos = vec4(-(gl_Vertex.x - pp.x) * depth / fov.x,
-                    -(gl_Vertex.y - pp.y) * depth / fov.y, depth, 1.0);
-*/
     vec4 pos = vec4(xy, depth, 1.0);
     pos = calibration * pos;
-
-    pos = vec4(gl_Vertex.xy, depth, 1.0);
-
     gl_Position = gl_ProjectionMatrix *  gl_ModelViewMatrix * pos;
     gl_FrontColor = gl_Color;
     gl_PointSize = 4.0;
