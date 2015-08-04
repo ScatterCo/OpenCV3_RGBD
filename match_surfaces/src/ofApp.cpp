@@ -158,11 +158,11 @@ void ofApp::computeOdometry() {
 	southMat.convertTo(southMat, CV_32FC1);
 	
 	if(!cv::rgbd::isValidDepth(*westMat.data)) {
-		cout << "West matrix is not valid depth" << endl;
+		ofLogError("odometry", "West matrix is not valid depth");
 	}
 	
 	if(!cv::rgbd::isValidDepth(*southMat.data)) {
-		cout << "South matrix is not valid depth" << endl;
+		ofLogError("odometry", "South matrix is not valid depth");
 	}
 	
 	bool res = odometryComputer->compute(cv::Mat(), westMat, cv::Mat(), cv::Mat(), southMat, cv::Mat(), transform);
