@@ -42,4 +42,5 @@ protected:
 	bool drawTextures;
 	bool useSRI;
 	bool drawNormals;
+	bool animateShader;
 };

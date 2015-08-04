@@ -37,6 +37,7 @@ void ofApp::setup() {
 	drawTextures = false;
 	useSRI = false;
 	drawNormals = false;
+	animateShader = true;
 	loadDepthFrame(images[frameNum]);
 	
 //	camera.setOrientation(ofVec3f(0.0, 0.0, -90.0));
@@ -105,7 +106,7 @@ void ofApp::draw() {
 	pointcloudShader.setUniformTexture("texture", pointCloud, 1);
 	pointcloudShader.setUniformTexture("normalMap", normalTex, 2);
 	pointcloudShader.setUniform1i("drawNormals", drawNormals);
-	pointcloudShader.setUniform1f("t", ofGetElapsedTimef());
+	pointcloudShader.setUniform1f("t", animateShader ? ofGetElapsedTimef() : 0.0);
 	
 	ofEnablePointSprites();
 	pointcloudShader.setUniformTexture("sprite", sprite, 3);
@@ -129,7 +130,8 @@ void ofApp::draw() {
 					   20, 20);
 	
 	string algorithmString =	"algorithm: FALS/SRI [a to toggle]	: " + ofToString(useSRI) + "\n" +
-								"draw normals: [n to toggle]		: " + ofToString(drawNormals) ;
+								"draw normals: [n to toggle]		: " + ofToString(drawNormals) + "\n" +
+								"animate shader: [m to change]		: " + ofToString(animateShader);
 	ofDrawBitmapString(algorithmString, 500, 20);
 }
 
@@ -168,6 +170,9 @@ void ofApp::keyPressed(int key) {
 	}
 	if(key == 'n') {
 		drawNormals = !drawNormals;
+	}
+	if(key == 'm') {
+		animateShader = !animateShader;
 	}
     
     if(key == 'p') {
